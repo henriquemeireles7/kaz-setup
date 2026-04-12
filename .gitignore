@@ -1,4 +1,5 @@
 node_modules/
+dist/
 .env
 .env.local
 .env.*.local
@@ -6,3 +7,4 @@ node_modules/
 *.key
 .DS_Store
 .context/
+public/styles.css

@@ -30,10 +30,17 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # CUSTOMIZE: Add your env vars for tests
       - name: Lint + Typecheck + Harden + Test
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
           NODE_ENV: test
-          # Add other test env vars here
+          BETTER_AUTH_SECRET: test-secret-min-32-chars-for-ci-validation
+          STRIPE_SECRET_KEY: sk_test_ci_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_test_ci_placeholder
+          STRIPE_PRICE_ID: price_test_yearly
+          STRIPE_MONTHLY_PRICE_ID: price_test_monthly
+          PUBLIC_STRIPE_KEY: pk_test_ci_placeholder
+          RESEND_API_KEY: re_test_ci_placeholder
+          ANTHROPIC_API_KEY: sk-ant-test_ci_placeholder
+          PUBLIC_APP_URL: http://localhost:3000
         run: bun run check

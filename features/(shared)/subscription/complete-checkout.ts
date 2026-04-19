@@ -63,7 +63,10 @@ completeCheckoutRoutes.post('/complete', zValidator('json', completeCheckoutSche
 
   // Validate email matches Stripe session (prevent subscription hijacking)
   const sessionEmail = session.customer_details?.email?.toLowerCase().trim()
-  if (sessionEmail && sessionEmail !== email.toLowerCase().trim()) {
+  if (!sessionEmail) {
+    return throwError(c, 'VALIDATION_ERROR', 'No email found in checkout session')
+  }
+  if (sessionEmail !== email.toLowerCase().trim()) {
     return throwError(c, 'VALIDATION_ERROR', 'Email must match the one used at checkout')
   }
 
@@ -88,7 +91,11 @@ completeCheckoutRoutes.post('/complete', zValidator('json', completeCheckoutSche
       where: eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId),
     })
     if (existingSub?.userId) {
-      return throwError(c, 'VALIDATION_ERROR', 'Account already created for this purchase. Please log in.')
+      return throwError(
+        c,
+        'VALIDATION_ERROR',
+        'Account already created for this purchase. Please log in.',
+      )
     }
 
     // Create user account via Better Auth
@@ -106,14 +113,22 @@ completeCheckoutRoutes.post('/complete', zValidator('json', completeCheckoutSche
       )
 
     if ((linked as unknown as { rowCount: number }).rowCount === 0) {
-      return throwError(c, 'VALIDATION_ERROR', 'Account already created for this purchase. Please log in.')
+      return throwError(
+        c,
+        'VALIDATION_ERROR',
+        'Account already created for this purchase. Please log in.',
+      )
     }
 
     // CUSTOMIZE: Set the role that paid users get
     await db.update(users).set({ role: 'pro', updatedAt: new Date() }).where(eq(users.id, userId))
   } catch (err) {
     if (err instanceof Error && 'code' in err) throw err
-    return throwError(c, 'VALIDATION_ERROR', 'Could not create account. Email may already be registered.')
+    return throwError(
+      c,
+      'VALIDATION_ERROR',
+      'Could not create account. Email may already be registered.',
+    )
   }
 
   // CUSTOMIZE: Send confirmation email, redirect to your app

@@ -14,10 +14,7 @@ If you didn't create an account, ignore this email.</p>`
   return { subject: 'Verify your email', ...emailLayout(content) }
 }
 
-export function welcomeEmail(vars: {
-  name: string
-  dashboardUrl: string
-}) {
+export function welcomeEmail(vars: { name: string; dashboardUrl: string }) {
   const name = escapeHtml(vars.name)
   const content = `
 <p>Hi ${name},</p>

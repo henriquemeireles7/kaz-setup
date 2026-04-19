@@ -5,7 +5,6 @@ export default defineConfig({
   out: './platform/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    // biome-ignore lint/style/noNonNullAssertion: required for drizzle-kit CLI
     url: process.env.DATABASE_URL!,
   },
 })

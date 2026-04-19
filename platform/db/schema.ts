@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 // ============================================================
 // Auth tables (required by Better Auth)
@@ -56,23 +56,86 @@ export const verifications = pgTable('verifications', {
 })
 
 // ============================================================
-// Subscriptions (Stripe billing)
+// Organizations (multi-tenancy)
 // ============================================================
-export const subscriptions = pgTable('subscriptions', {
+export const organizations = pgTable('organizations', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
-  stripeCustomerId: text('stripe_customer_id').notNull(),
-  stripeSubscriptionId: text('stripe_subscription_id').notNull().unique(),
-  status: text('status', { enum: ['active', 'past_due', 'cancelled', 'trialing'] })
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  plan: text('plan', { enum: ['free', 'pro', 'enterprise'] })
     .notNull()
-    .default('active'),
-  planInterval: text('plan_interval', { enum: ['month', 'year'] })
-    .notNull()
-    .default('year'),
-  currentPeriodEnd: timestamp('current_period_end').notNull(),
+    .default('free'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
+
+export const memberships = pgTable(
+  'memberships',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orgId: uuid('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['owner', 'admin', 'member'] })
+      .notNull()
+      .default('member'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('memberships_org_user_idx').on(table.orgId, table.userId),
+    index('memberships_user_id_idx').on(table.userId),
+    index('memberships_org_id_idx').on(table.orgId),
+  ],
+)
+
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    orgId: uuid('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: text('role', { enum: ['admin', 'member'] })
+      .notNull()
+      .default('member'),
+    token: text('token').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    acceptedAt: timestamp('accepted_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('invitations_org_id_idx').on(table.orgId),
+    index('invitations_token_idx').on(table.token),
+  ],
+)
+
+// ============================================================
+// Subscriptions (Stripe billing)
+// ============================================================
+export const subscriptions = pgTable(
+  'subscriptions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
+    stripeCustomerId: text('stripe_customer_id').notNull(),
+    stripeSubscriptionId: text('stripe_subscription_id').notNull().unique(),
+    status: text('status', { enum: ['active', 'past_due', 'cancelled', 'trialing'] })
+      .notNull()
+      .default('active'),
+    planInterval: text('plan_interval', { enum: ['month', 'year'] })
+      .notNull()
+      .default('year'),
+    currentPeriodEnd: timestamp('current_period_end').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [index('subscriptions_org_id_idx').on(table.orgId)],
+)
 
 // ============================================================
 // Webhook Events (Stripe idempotency)
@@ -84,6 +147,32 @@ export const webhookEvents = pgTable('webhook_events', {
   processedAt: timestamp('processed_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
+
+// ============================================================
+// API Keys (agent-first authentication)
+// ============================================================
+export const apiKeys = pgTable('api_keys', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  keyHash: text('key_hash').notNull().unique(),
+  role: text('role', { enum: ['free', 'pro', 'admin'] })
+    .notNull()
+    .default('free'),
+  expiresAt: timestamp('expires_at'),
+  revokedAt: timestamp('revoked_at'),
+  lastUsedAt: timestamp('last_used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// ============================================================
+// Type helpers
+// ============================================================
+export type Organization = typeof organizations.$inferSelect
+export type Membership = typeof memberships.$inferSelect
+export type Invitation = typeof invitations.$inferSelect
 
 // ============================================================
 // CUSTOMIZE: Add your app tables below

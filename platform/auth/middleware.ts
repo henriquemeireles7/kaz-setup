@@ -1,6 +1,6 @@
 import type { Context, Next } from 'hono'
-import type { AppEnv } from '../types'
 import { throwError } from '../errors'
+import type { AppEnv } from '../types'
 import { auth } from './config'
 
 export async function requireAuth(c: Context<AppEnv>, next: Next) {
@@ -10,7 +10,7 @@ export async function requireAuth(c: Context<AppEnv>, next: Next) {
     return throwError(c, 'UNAUTHORIZED')
   }
 
-  c.set('user', session.user as AppEnv['Variables']['user'])
+  c.set('user', session.user as unknown as AppEnv['Variables']['user'])
   c.set('session', session.session)
   return next()
 }

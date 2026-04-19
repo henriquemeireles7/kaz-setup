@@ -1,127 +1,94 @@
-# mharness
+# Douala
 
-AI development harness for Claude Code. A methodology + infrastructure that makes AI agents write production-quality code.
+The maximal SaaS template. Clone it, describe your product to AI, and let AI remove what you don't need.
 
-## What this is
+Built with **Hono + Bun + Preact SSR + Drizzle + PostgreSQL**.
 
-A template repo containing:
+## What's Included
 
-- **Hooks** — PreToolUse/PostToolUse/Stop guards that enforce rules deterministically
-- **Skills** — 8 slash-command workflows (strategy, roadmap, code, content, review, health, harness improvement, deploy recovery)
-- **Decisions framework** — Three-domain strategy structure with maturity scoring
-- **Context system** — Auto-updating CLAUDE.md files per folder (Domain-Spec Architecture)
+- **Auth** — Email/password + OAuth via [better-auth](https://www.better-auth.com/)
+- **Payments** — Stripe subscriptions (checkout, webhooks, customer portal)
+- **Email** — Transactional email via [Resend](https://resend.com/)
+- **Database** — PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/) (migrations, type-safe queries)
+- **AI** — Anthropic Claude integration
+- **Storage** — S3/R2 file uploads with signed URLs
+- **Analytics** — PostHog (optional, degrades gracefully)
+- **SEO** — Meta tags, JSON-LD, sitemap generation
+- **Security** — Secure headers, rate limiting, input validation, harden checks
+- **CI/CD** — GitHub Actions, Dockerfile, Railway deployment
+- **AI Harness** — Hooks and skills for Claude Code development
 
-## Quick start
+## Quick Start
 
-1. Click "Use this template" on GitHub (or clone)
-2. Customize `CLAUDE.md` — replace placeholders with your stack, rules, and project context
-3. Customize `.claude/hooks/harden-gate.ts` — add your project-specific security patterns
-4. Customize `.claude/hooks/reinject-context.ts` — add your stack reminders
-5. Fill in `decisions/` reference files for your project
-6. Start working with Claude Code — the harness enforces itself
-
-## Architecture
-
-```
-.claude/
-├── settings.json              # Hook wiring (events → scripts)
-└── hooks/
-    ├── block-dangerous.ts     # PreToolUse: blocks destructive commands
-    ├── protect-files.ts       # PreToolUse: blocks edits to .env, .git/, secrets/
-    ├── protect-config.ts      # PreToolUse: blocks config edits (fix code, not config)
-    ├── pre-commit-check.ts    # PreToolUse: runs linter + typecheck before git commit
-    ├── warn-console-log.ts    # PostToolUse: warns on console.log in production code
-    ├── harden-gate.ts         # PostToolUse: real-time security + pattern checks
-    ├── stop-quality-gate.ts   # Stop: batch lint + typecheck on all changed files
-    ├── update-context-files.ts# Stop: auto-regenerate CLAUDE.md footers
-    ├── reinject-context.ts    # SessionStart: re-inject rules after context compaction
-    ├── notify-done.ts         # Stop: macOS notification when session ends
-    ├── check-gstack.sh        # PreToolUse: verify gstack installed (optional)
-    └── lib/
-        ├── update-claude-md.ts   # Footer renderer
-        └── analyze-directory.ts  # Directory scanner (exports, deps)
-
-skills/
-├── d-strategy/   # Interactive founder Q&A → initiative document
-├── d-roadmap/    # Initiative → project roadmaps (mechanical extraction)
-├── d-code/       # Roadmap → TDD implementation (5 phases)
-├── d-content/    # Strategy → content (blog, handbook, social, clips)
-├── d-review/     # Pre-commit review (mechanical + AI, 7 phases)
-├── d-harness/    # Error → prevention rule (feedback loop)
-├── d-health/     # 10-session codebase health audit
-└── d-fail/       # Deploy failure recovery
-
-decisions/
-├── maturity.md       # Maturity framework (5 levels, 3 domains, categories)
-├── harness.md        # Harness architecture docs
-├── health.md         # Living scorecard (updated by d-health)
-├── humantasks.md     # AI-discovered human-required actions
-├── CLAUDE.md         # Folder navigation guide
-├── product/context.md   # Product domain context
-├── growth/context.md    # Growth domain context
-└── harness/context.md   # Harness domain context
+```bash
+git clone <your-repo-url> && cd douala
+bun install
+docker compose up -d
+cp .env.example .env  # then fill in your API keys
+bun run db:migrate
+bun run dev
 ```
 
-## The methodology
+Open http://localhost:3000
 
-### Two session types
+## The Maximal Template Philosophy
 
-**Strategy session** (1 workspace per initiative):
+Traditional templates ship minimal boilerplate. Douala ships **everything a SaaS needs** — auth, payments, email, database, AI, storage, analytics, security, CI/CD. When you start a new project:
+
+1. Clone Douala
+2. Describe your product to an AI agent
+3. AI removes what you don't need
+4. Build your unique features on top
+
+AI makes deletion near-free. See [docs/ai-workflow.md](./docs/ai-workflow.md) for details.
+
+## Project Structure
+
 ```
-d-strategy → reviews → d-roadmap → ship
+platform/       Shared infrastructure (env, auth, db, server, errors)
+providers/      Thin SDK wrappers (AI, email, payments, storage, analytics)
+features/       Business logic grouped by domain
+styles/         Global CSS with design tokens
+docs/           Project documentation
+decisions/      Strategy documents and reference files
 ```
 
-**Execution session** (1 workspace per project):
-```
-Read roadmap.md → d-code or d-content → d-review → ship
-```
+See [docs/architecture.md](./docs/architecture.md) for the full breakdown.
 
-### Error feedback loop
-```
-Error happens → d-harness analyzes → creates prevention artifact → error class eliminated
-```
+## Scripts
 
-Prevention artifacts go into the right layer:
-1. **Hook** (deterministic, machine-checkable) — preferred
-2. **CLAUDE.md rule** (judgment-based, advisory)
-3. **Config file** (biome.json, tsconfig.json, etc.)
-4. **Script** (complex multi-file check)
-5. **Universal file** (decisions/*.md)
+| Command | Description |
+|---|---|
+| `bun run dev` | Dev server with hot reload |
+| `bun run check` | Full CI pipeline (lint + types + harden + test) |
+| `bun run check:lint` | Biome lint only |
+| `bun run check:types` | TypeScript typecheck only |
+| `bun run check:test` | Tests only |
+| `bun run lint` | Auto-fix lint issues |
+| `bun run db:migrate` | Run database migrations |
+| `bun run db:generate` | Generate new migration |
+| `bun run db:studio` | Open Drizzle Studio |
 
-### Domain-Spec Architecture (DSA)
+## Documentation
 
-Every code folder gets a `CLAUDE.md` with:
-- Purpose, critical rules, import maps, recipes
-- Auto-generated footer (files, exports, dependencies)
-- Footer refreshed by the Stop hook whenever code changes
+- [Getting Started](./docs/getting-started.md) — setup guide with env var reference
+- [Architecture](./docs/architecture.md) — codebase structure and patterns
+- [AI Workflow](./docs/ai-workflow.md) — how to customize using AI
 
-## Customization guide
+## Tech Stack
 
-### Must customize (marked with `CUSTOMIZE:` comments)
-
-| File | What to change |
-|------|---------------|
-| `CLAUDE.md` | Stack, build order, key files, commands, rules |
-| `.claude/hooks/harden-gate.ts` | Security patterns specific to your framework |
-| `.claude/hooks/reinject-context.ts` | Stack reminders for context compaction |
-| `.claude/hooks/protect-config.ts` | Your config file list |
-| `.claude/hooks/pre-commit-check.ts` | Your linter and typechecker commands |
-| `.claude/hooks/stop-quality-gate.ts` | Your linter and typechecker commands |
-| `decisions/maturity.md` | Your maturity categories and scoring |
-
-### Optional customization
-
-| File | What to change |
-|------|---------------|
-| Skills (`skills/*/SKILL.md`) | File paths, platform references |
-| `decisions/*.md` | Your project's reference files |
-| Content rules (`skills/d-content/rules-*.md`) | Your content guidelines |
-
-## Prerequisites
-
-- [Bun](https://bun.sh) — runtime for hooks and scripts
-- [Claude Code](https://claude.ai/code) — AI coding agent
-- [gstack](https://github.com/garrytan/gstack) — optional, for review/QA/design skills
+| Layer | Technology |
+|---|---|
+| Runtime | [Bun](https://bun.sh) |
+| Framework | [Hono](https://hono.dev) |
+| UI | [Preact](https://preactjs.com) SSR |
+| Database | PostgreSQL + [Drizzle ORM](https://orm.drizzle.team) |
+| Auth | [better-auth](https://www.better-auth.com) |
+| Payments | [Stripe](https://stripe.com) |
+| Email | [Resend](https://resend.com) |
+| AI | [Anthropic](https://anthropic.com) |
+| Linting | [Biome](https://biomejs.dev) |
+| Styling | [Tailwind CSS](https://tailwindcss.com) |
 
 ## License
 

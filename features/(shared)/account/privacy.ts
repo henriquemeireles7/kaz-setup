@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/platform/db/client'
-import { subscriptions, users } from '@/platform/db/schema'
+import { memberships, subscriptions, users } from '@/platform/db/schema'
+import { payments } from '@/providers/payments'
 
 /**
  * Export all user data as JSON (GDPR/LGPD right to data portability).
@@ -29,6 +30,37 @@ export async function exportUserData(userId: string) {
  * CUSTOMIZE: Add delete calls for your app-specific tables.
  */
 export async function deleteUserAccount(userId: string) {
+  // Check for sole-owner organizations — must transfer ownership first
+  const ownerMemberships = await db.query.memberships.findMany({
+    where: and(eq(memberships.userId, userId), eq(memberships.role, 'owner')),
+  })
+
+  for (const m of ownerMemberships) {
+    const otherOwners = await db.query.memberships.findMany({
+      where: and(eq(memberships.orgId, m.orgId), eq(memberships.role, 'owner')),
+    })
+    if (otherOwners.length <= 1) {
+      throw new Error(
+        'Cannot delete account while sole owner of organizations. Transfer ownership first.',
+      )
+    }
+  }
+
+  // Cancel active Stripe subscriptions before deleting DB rows
+  const userSubs = await db.query.subscriptions.findMany({
+    where: eq(subscriptions.userId, userId),
+  })
+
+  for (const sub of userSubs) {
+    if (sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due') {
+      try {
+        await payments.subscriptions.cancel(sub.stripeSubscriptionId)
+      } catch {
+        // Stripe failure should not block account deletion
+      }
+    }
+  }
+
   await db.delete(subscriptions).where(eq(subscriptions.userId, userId))
   // CUSTOMIZE: Delete additional user data tables here
   // Deleting user cascades sessions, accounts

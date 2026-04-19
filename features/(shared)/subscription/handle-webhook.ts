@@ -5,7 +5,14 @@ import { subscriptions, webhookEvents } from '@/platform/db/schema'
 import { env } from '@/platform/env'
 import { throwError } from '@/platform/errors'
 import { success } from '@/platform/server/responses'
+import { sendEmail } from '@/providers/email'
 import { intervalFromPriceId, payments } from '@/providers/payments'
+import {
+  accessRevokedEmail,
+  paymentFailedEmail,
+  renewalReceiptEmail,
+  subscriptionCancelledEmail,
+} from '../email/payment-emails'
 import { getUserForSubscription } from './helpers'
 
 export const webhookRoutes = new Hono()
@@ -80,6 +87,7 @@ webhookRoutes.post('/', async (c) => {
       const invoice = event.data.object as unknown as {
         billing_reason: string
         subscription: string
+        amount_paid?: number
         lines?: { data?: Array<{ period?: { end?: number } }> }
       }
 
@@ -96,7 +104,32 @@ webhookRoutes.post('/', async (c) => {
           .where(eq(subscriptions.stripeSubscriptionId, subId))
       }
 
-      // CUSTOMIZE: Send renewal receipt email
+      // Send renewal receipt email
+      const user = await getUserForSubscription(subId)
+      if (user) {
+        const amount = invoice.amount_paid
+          ? `$${(invoice.amount_paid / 100).toFixed(2)}`
+          : 'your plan'
+        const nextDate = periodEnd
+          ? new Date(periodEnd * 1000).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+          : 'your next billing date'
+
+        await sendEmail(
+          user.email,
+          renewalReceiptEmail({
+            name: user.name,
+            amount,
+            cardLast4: '••••',
+            nextRenewalDate: nextDate,
+            portalUrl: `${env.PUBLIC_APP_URL}/api/subscription/portal`,
+          }),
+        ).catch((err) => console.error('[webhook] Failed to send renewal email:', err))
+      }
+
       break
     }
 
@@ -104,6 +137,7 @@ webhookRoutes.post('/', async (c) => {
       const invoice = event.data.object as unknown as {
         subscription: string
         attempt_count: number
+        amount_due?: number
       }
 
       const subId = typeof invoice.subscription === 'string' ? invoice.subscription : ''
@@ -118,7 +152,23 @@ webhookRoutes.post('/', async (c) => {
         .set({ status: 'past_due', updatedAt: new Date() })
         .where(eq(subscriptions.stripeSubscriptionId, subId))
 
-      // CUSTOMIZE: Send payment failed email
+      // Send payment failed email
+      const user = await getUserForSubscription(subId)
+      if (user) {
+        const amount = invoice.amount_due
+          ? `$${(invoice.amount_due / 100).toFixed(2)}`
+          : 'your payment'
+
+        await sendEmail(
+          user.email,
+          paymentFailedEmail({
+            name: user.name,
+            amount,
+            portalUrl: `${env.PUBLIC_APP_URL}/api/subscription/portal`,
+          }),
+        ).catch((err) => console.error('[webhook] Failed to send payment failed email:', err))
+      }
+
       break
     }
 
@@ -150,7 +200,26 @@ webhookRoutes.post('/', async (c) => {
         })
         .where(eq(subscriptions.stripeSubscriptionId, sub.id))
 
-      // CUSTOMIZE: Send cancellation email if sub.cancel_at_period_end
+      // Send cancellation email if subscription set to cancel at period end
+      if (sub.cancel_at_period_end) {
+        const user = await getUserForSubscription(sub.id)
+        if (user) {
+          const periodEndDate = new Date(sub.current_period_end * 1000).toLocaleDateString(
+            'en-US',
+            { year: 'numeric', month: 'long', day: 'numeric' },
+          )
+
+          await sendEmail(
+            user.email,
+            subscriptionCancelledEmail({
+              name: user.name,
+              periodEndDate,
+              pricingUrl: `${env.PUBLIC_APP_URL}/pricing`,
+            }),
+          ).catch((err) => console.error('[webhook] Failed to send cancellation email:', err))
+        }
+      }
+
       break
     }
 
@@ -162,7 +231,18 @@ webhookRoutes.post('/', async (c) => {
         .set({ status: 'cancelled', updatedAt: new Date() })
         .where(eq(subscriptions.stripeSubscriptionId, subObj.id))
 
-      // CUSTOMIZE: Send access revoked email
+      // Send access revoked email
+      const user = await getUserForSubscription(subObj.id)
+      if (user) {
+        await sendEmail(
+          user.email,
+          accessRevokedEmail({
+            name: user.name,
+            reactivateUrl: `${env.PUBLIC_APP_URL}/pricing`,
+          }),
+        ).catch((err) => console.error('[webhook] Failed to send access revoked email:', err))
+      }
+
       break
     }
   }

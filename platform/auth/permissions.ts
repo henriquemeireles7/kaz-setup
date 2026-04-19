@@ -1,6 +1,6 @@
 import type { Context, Next } from 'hono'
-import type { AppEnv } from '../types'
 import { throwError } from '../errors'
+import type { AppEnv } from '../types'
 
 // CUSTOMIZE: Define your roles and permissions
 const rolePermissions = {
@@ -17,7 +17,7 @@ export function requirePermission(permission: Permission) {
     const user = c.get('user')
     const perms = rolePermissions[user.role as Role] ?? []
 
-    if (!perms.includes(permission)) {
+    if (!(perms as readonly string[]).includes(permission)) {
       return throwError(c, 'FORBIDDEN')
     }
 

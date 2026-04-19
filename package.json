@@ -30,7 +30,7 @@
     "gray-matter": "^4.0.3",
     "hono": "^4.7.0",
     "isomorphic-dompurify": "^2.20.0",
-    "marked": "^15.0.0",
+    "marked": "^18.0.2",
     "posthog-node": "^4.4.0",
     "postgres": "^3.4.0",
     "preact": "^10.25.0",

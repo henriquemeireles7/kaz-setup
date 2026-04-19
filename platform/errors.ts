@@ -28,8 +28,27 @@ export const errors = {
     message: 'Active subscription required',
   },
 
+  // Organizations
+  ORG_NOT_FOUND: { status: 404, code: 'ORG_NOT_FOUND', message: 'Organization not found' },
+  NOT_A_MEMBER: {
+    status: 403,
+    code: 'NOT_A_MEMBER',
+    message: 'You are not a member of this organization',
+  },
+  INVITATION_EXPIRED: {
+    status: 410,
+    code: 'INVITATION_EXPIRED',
+    message: 'Invitation has expired',
+  },
+  INVITATION_NOT_FOUND: {
+    status: 404,
+    code: 'INVITATION_NOT_FOUND',
+    message: 'Invitation not found',
+  },
+
   // Conflict
   ALREADY_EXISTS: { status: 409, code: 'ALREADY_EXISTS', message: 'Resource already exists' },
+  CONFLICT: { status: 409, code: 'CONFLICT', message: 'Conflict with current state' },
 
   // Rate Limiting
   RATE_LIMITED: { status: 429, code: 'RATE_LIMITED', message: 'Too many requests' },

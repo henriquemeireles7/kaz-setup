@@ -3,6 +3,17 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from '../db/client'
 import { env } from '../env'
 
+// Conditionally enable Google OAuth when credentials are present
+const socialProviders =
+  env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+    ? {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+        },
+      }
+    : undefined
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'pg' }),
   secret: env.BETTER_AUTH_SECRET,
@@ -18,11 +29,6 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // refresh daily
   },
 
-  // CUSTOMIZE: Add OAuth providers
-  // socialProviders: {
-  //   google: {
-  //     clientId: env.GOOGLE_CLIENT_ID,
-  //     clientSecret: env.GOOGLE_CLIENT_SECRET,
-  //   },
-  // },
+  // CUSTOMIZE: Add more OAuth providers as needed
+  socialProviders,
 })

@@ -19,3 +19,29 @@ case 'customer.subscription.trial_will_end': {
   break
 }
 ```
+
+---
+<!-- AUTO-GENERATED BELOW — do not edit manually -->
+
+## Files
+| File | Exports |
+|------|---------|
+| complete-checkout.ts | completeCheckoutRoutes |
+| create-checkout.ts | checkoutRoutes |
+| customer-portal.ts | portalRoutes |
+| handle-webhook.ts | webhookRoutes |
+| helpers.ts | getUserForSubscription |
+| require-subscription.ts | requireActiveSubscription |
+
+## Internal Dependencies
+- platform/auth
+- platform/db
+- platform/env
+- platform/errors
+- platform/server
+- platform/types
+- providers/analytics
+- providers/email
+- providers/payments
+
+<!-- Generated: 2026-04-19T04:04:55.790Z -->

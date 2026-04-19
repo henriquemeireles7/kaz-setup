@@ -17,7 +17,8 @@ Contains env config, error system, auth, database, server setup, and response he
 | env.ts | All environment variables (Zod-validated) |
 | errors.ts | All error codes + throwError() |
 | types.ts | App-wide types (AppUser, AppEnv) |
-| rate-limit.ts | In-memory rate limiter |
+| rate-limit.ts | Token bucket rate limiter + Hono middleware |
+| csrf.ts | CSRF double-submit cookie middleware |
 | server/app.ts | Hono app setup, middleware, health checks |
 | server/routes.ts | Route mounting (maintains type chain) |
 | server/responses.ts | success(), paginated(), created(), etc. |
@@ -28,3 +29,18 @@ Contains env config, error system, auth, database, server setup, and response he
 | db/schema.ts | All database tables |
 | scripts/migrate.ts | Run migrations |
 | scripts/harden-check.ts | Mechanical security checks |
+
+---
+<!-- AUTO-GENERATED BELOW — do not edit manually -->
+
+## Files
+| File | Exports |
+|------|---------|
+| csrf.ts | csrfProtection |
+| env.ts | env |
+| errors.ts | errors, ErrorCode, throwError |
+| logger.ts | Logger, createLogger, getLogger |
+| rate-limit.ts | RateLimiter, createRateLimiter, checkRateLimit, rateLimitMiddleware |
+| types.ts | AppUser, AppOrg, OrgMemberRole, AppEnv |
+
+<!-- Generated: 2026-04-19T04:04:55.791Z -->
